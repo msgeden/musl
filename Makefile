@@ -43,8 +43,14 @@ LDFLAGS_AUTO =
 LIBCC = -lgcc
 CPPFLAGS =
 CFLAGS =
-CFLAGS_AUTO = -Os -pipe
-CFLAGS_C99FSE = -std=c99 -ffreestanding -nostdinc 
+
+#for SORA
+CFLAGS_AUTO = -O0 -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -pipe
+#CFLAGS_AUTO = -Os -pipe
+
+#for SORA
+CFLAGS_C99FSE = -ffreestanding -nostdinc 
+#CFLAGS_C99FSE = -std=c99 -ffreestanding -nostdinc 
 
 CFLAGS_ALL = $(CFLAGS_C99FSE)
 CFLAGS_ALL += -D_XOPEN_SOURCE=700 -I$(srcdir)/arch/$(ARCH) -I$(srcdir)/arch/generic -Iobj/src/internal -I$(srcdir)/src/include -I$(srcdir)/src/internal -Iobj/include -I$(srcdir)/include
@@ -148,6 +154,11 @@ obj/%.o: $(srcdir)/%.S
 
 obj/%.o: $(srcdir)/%.c $(GENH) $(IMPH)
 	$(CC_CMD)
+	
+#for SORA to compile with own flags. Only for ARM64 and x64.
+#MAC algorithm can be replaced by another one
+sora/siphash24.o: sora/siphash24.c
+	$(CC) -O3 -c -o $@ $< 
 
 obj/%.lo: $(srcdir)/%.s
 	$(AS_CMD)
@@ -158,13 +169,16 @@ obj/%.lo: $(srcdir)/%.S
 obj/%.lo: $(srcdir)/%.c $(GENH) $(IMPH)
 	$(CC_CMD)
 
-lib/libc.so: $(LOBJS) $(LDSO_OBJS)
-	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
-	-Wl,-e,_dlstart -o $@ $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+sora/siphash24.lo: sora/siphash24.c $(GENH) $(IMPH)
+	$(CC) -O3 -c -o $@ $< 
 
-lib/libc.a: $(AOBJS)
+lib/libc.so: sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) 
+	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
+	-Wl,-e,_dlstart -o $@ sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+
+lib/libc.a: sora/siphash24.o $(AOBJS) 
 	rm -f $@
-	$(AR) rc $@ $(AOBJS)
+	$(AR) rc $@ sora/siphash24.o $(AOBJS)
 	$(RANLIB) $@
 
 $(EMPTY_LIBS):
@@ -230,6 +244,9 @@ endif
 
 clean:
 	rm -rf obj lib
+	rm -rf install
+	rm sora/siphash24.o
+	rm sora/siphash24.lo
 
 distclean: clean
 	rm -f config.mak
