@@ -6,4 +6,5 @@
 config.mak
 lib/musl-gcc.specs
 /install/
+/install-naive/
 /obj/
