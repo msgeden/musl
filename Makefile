@@ -46,7 +46,10 @@ CFLAGS =
 
 #for SORA
 CFLAGS_AUTO = -O0 -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -pipe
+#setting caller-saved registers as callee-saved requires the compilation of Linux kernel as it breaks the ABI.
+#CFLAGS_AUTO =- -O0 -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -pipe -fcall-saved-x9 -fcall-saved-x10 -fcall-saved-x11 -fcall-saved-x12 -fcall-saved-x13 
 #CFLAGS_AUTO = -Os -pipe
+
 
 #for SORA
 CFLAGS_C99FSE = -ffreestanding -nostdinc 
