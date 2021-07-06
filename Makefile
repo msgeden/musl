@@ -163,6 +163,10 @@ obj/%.o: $(srcdir)/%.c $(GENH) $(IMPH)
 sora/siphash24.o: sora/siphash24.c
 	$(CC) -O3 -c -o $@ $< 
 
+sora/sha256.o: sora/sha256.c
+	$(CC) -O3 -c -o $@ $< 
+
+
 obj/%.lo: $(srcdir)/%.s
 	$(AS_CMD)
 
@@ -175,13 +179,26 @@ obj/%.lo: $(srcdir)/%.c $(GENH) $(IMPH)
 sora/siphash24.lo: sora/siphash24.c $(GENH) $(IMPH)
 	$(CC) -O3 -c -o $@ $< 
 
-lib/libc.so: sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) 
-	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
-	-Wl,-e,_dlstart -o $@ sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+sora/sha256.lo: sora/sha256.c $(GENH) $(IMPH)
+	$(CC) -O3 -c -o $@ $< 
 
-lib/libc.a: sora/siphash24.o $(AOBJS) 
+
+#lib/libc.so: sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) 
+#	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
+#	-Wl,-e,_dlstart -o $@ sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+
+#lib/libc.a: sora/siphash24.o $(AOBJS) 
+#	rm -f $@
+#	$(AR) rc $@ sora/siphash24.o $(AOBJS)
+#	$(RANLIB) $@
+
+lib/libc.so: sora/sha256.lo $(LOBJS) $(LDSO_OBJS) 
+	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
+	-Wl,-e,_dlstart -o $@ sora/sha256.lo sora/sha256-armv8-aarch64.S $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+
+lib/libc.a: sora/sha256.o $(AOBJS) 
 	rm -f $@
-	$(AR) rc $@ sora/siphash24.o $(AOBJS)
+	$(AR) rc $@ sora/sha256.o sora/sha256-armv8-aarch64.S $(AOBJS)
 	$(RANLIB) $@
 
 $(EMPTY_LIBS):
@@ -247,7 +264,7 @@ endif
 
 clean:
 	rm -rf obj lib
-	rm -rf install
+#	rm -rf install
 	rm sora/siphash24.o
 	rm sora/siphash24.lo
 
