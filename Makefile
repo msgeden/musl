@@ -45,7 +45,7 @@ CPPFLAGS =
 CFLAGS =
 
 #for SORA
-CFLAGS_AUTO = -O0 -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -pipe
+CFLAGS_AUTO = -Os -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -pipe
 #setting caller-saved registers as callee-saved requires the compilation of Linux kernel as it breaks the ABI.
 #CFLAGS_AUTO =- -O0 -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -pipe -fcall-saved-x9 -fcall-saved-x10 -fcall-saved-x11 -fcall-saved-x12 -fcall-saved-x13 
 #CFLAGS_AUTO = -Os -pipe
@@ -161,11 +161,13 @@ obj/%.o: $(srcdir)/%.c $(GENH) $(IMPH)
 #for SORA to compile with own flags. Only for ARM64 and x64.
 #MAC algorithm can be replaced by another one
 sora/siphash24.o: sora/siphash24.c
-	$(CC) -O3 -c -o $@ $< 
+	$(CC) -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -O3 -c -o $@ $< 
 
-sora/sha256.o: sora/sha256.c
-	$(CC) -O3 -c -o $@ $< 
+sora/sha256-armv8-assembly.o: sora/sha256-armv8-assembly.c
+	$(CC) -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -O3 -mcpu=generic+crypto -c -o $@ $< 
 
+sora/sha256-armv8-instrinsic.o: sora/sha256-armv8-instrinsic.c
+	$(CC) -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -O3 -march=armv8-a+crc+crypto -c -o $@ $< 
 
 obj/%.lo: $(srcdir)/%.s
 	$(AS_CMD)
@@ -177,28 +179,42 @@ obj/%.lo: $(srcdir)/%.c $(GENH) $(IMPH)
 	$(CC_CMD)
 
 sora/siphash24.lo: sora/siphash24.c $(GENH) $(IMPH)
-	$(CC) -O3 -c -o $@ $< 
+	$(CC) -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -O3 -c -o $@ $< 
 
-sora/sha256.lo: sora/sha256.c $(GENH) $(IMPH)
-	$(CC) -O3 -c -o $@ $< 
+sora/sha256-armv8-assembly.lo: sora/sha256-armv8-assembly.c $(GENH) $(IMPH)
+	$(CC) -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -O3 -mcpu=generic+crypto -c -o $@ $< 
+
+sora/sha256-armv8-instrinsic.lo: sora/sha256-armv8-instrinsic.c $(GENH) $(IMPH)
+	$(CC) -fno-omit-frame-pointer -fno-stack-protector -fno-asynchronous-unwind-tables -fno-dwarf2-cfi-asm -O3 -march=armv8-a+crc+crypto -c -o $@ $< 
 
 
-#lib/libc.so: sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) 
-#	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
-#	-Wl,-e,_dlstart -o $@ sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+# Comment out the Hash/MAC algoritm to be used 
 
-#lib/libc.a: sora/siphash24.o $(AOBJS) 
-#	rm -f $@
-#	$(AR) rc $@ sora/siphash24.o $(AOBJS)
-#	$(RANLIB) $@
+# lib/libc.so: sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) 
+# 	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
+# 	-Wl,-e,_dlstart -o $@ sora/siphash24.lo $(LOBJS) $(LDSO_OBJS) $(LIBCC)
 
-lib/libc.so: sora/sha256.lo $(LOBJS) $(LDSO_OBJS) 
+# lib/libc.a: sora/siphash24.o $(AOBJS) 
+# 	rm -f $@
+# 	$(AR) rc $@ sora/siphash24.o $(AOBJS)
+# 	$(RANLIB) $@
+
+# lib/libc.so: sora/sha256-armv8-assembly.lo $(LOBJS) $(LDSO_OBJS) 
+# 	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
+# 	-Wl,-e,_dlstart -o $@ sora/sha256-armv8-assembly.lo sora/sha256-armv8-aarch64.o $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+
+# lib/libc.a: sora/sha256-armv8-assembly.o $(AOBJS) 
+# 	rm -f $@
+# 	$(AR) rc $@ sora/sha256-armv8-assembly.o sora/sha256-armv8-aarch64.o $(AOBJS)
+# 	$(RANLIB) $@
+
+lib/libc.so: sora/sha256-armv8-instrinsic.lo $(LOBJS) $(LDSO_OBJS) 
 	$(CC) $(CFLAGS_ALL) $(LDFLAGS_ALL) -nostdlib -shared \
-	-Wl,-e,_dlstart -o $@ sora/sha256.lo sora/sha256-armv8-aarch64.S $(LOBJS) $(LDSO_OBJS) $(LIBCC)
+	-Wl,-e,_dlstart -o $@ sora/sha256-armv8-instrinsic.lo $(LOBJS) $(LDSO_OBJS) $(LIBCC)
 
-lib/libc.a: sora/sha256.o $(AOBJS) 
+lib/libc.a: sora/sha256-armv8-instrinsic.o $(AOBJS) 
 	rm -f $@
-	$(AR) rc $@ sora/sha256.o sora/sha256-armv8-aarch64.S $(AOBJS)
+	$(AR) rc $@ sora/sha256-armv8-instrinsic.o $(AOBJS)
 	$(RANLIB) $@
 
 $(EMPTY_LIBS):
