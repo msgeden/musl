@@ -96,7 +96,7 @@ static const uint32_t K[] =
 };
 
 //Original siphash code has taken from https://github.com/noloader/SHA-Intrinsics.
-void sha256_process_arm(uint32_t state[8], const uint8_t data[], uint32_t length)
+void __sha256_process_arm(uint32_t state[8], const uint8_t data[], uint32_t length)
 {
     uint32x4_t STATE0, STATE1, ABEF_SAVE, CDGH_SAVE;
     uint32x4_t MSG0, MSG1, MSG2, MSG3;
@@ -272,7 +272,7 @@ unsigned long __register_mac(const unsigned char *m, unsigned len)
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
-    sha256_process_arm(state, m, len);
+    __sha256_process_arm(state, m, len);
     union long_bytes res;
 
     res.byte[0] = (uint8_t)(state[0] >> 24);
@@ -296,7 +296,7 @@ void __register_check(const unsigned char *m, unsigned len, unsigned long prev)
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
         0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 
-    sha256_process_arm(state, m, len);
+    __sha256_process_arm(state, m, len);
     union long_bytes res;
     res.byte[0] = (uint8_t)(state[0] >> 24);
     res.byte[1] = (uint8_t)(state[0] >> 16);
